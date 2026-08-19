@@ -706,6 +706,7 @@ function stop(){
   state.running=false;
   clearInterval(suggestTimer); clearInterval(timerInterval); clearTimeout(simTimer); clearInterval(simPulse);
   try{speechSynthesis.cancel();}catch(e){}
+  try{if(simAudio){simAudio.onended=null;simAudio.pause();}}catch(e){}
   try{recognition?.stop();}catch(e){}
   if(!state.sim) stopAudio();
   state.rms=0; state.activeIdx=-1;
@@ -739,38 +740,63 @@ const SIM_SCRIPT=[
   [110,"Lo agarro yo, pero necesito que diseño me pase los flujos actualizados antes del jueves."],
   [165,"También tendríamos que decidir si el lanzamiento va con precio único o suscripción."],
 ];
-let simTimer, simPulse, simIdx=0, simVoices=[];
+let simTimer, simPulse, simIdx=0, simVoices={m:[],f:[],any:[]};
+// género de cada participante simulado, en orden de aparición: Marito, Carla, Gonzalo
+const SIM_GENDERS=["m","f","m"];
+const MALE_VOICE=/jorge|diego|juan|carlos|andr[eé]s|enrique|pablo|miguel|dami[aá]n|arthur|daniel|reed|rocko|eddy|grandpa|male|hombre/i;
+const FEMALE_VOICE=/m[oó]nica|paulina|luciana|isabela|francisca|soledad|ang[eé]lica|helena|sabina|marisol|pen[eé]lope|lupe|carmen|catalina|shelley|sandy|flo\b|grandma|female|mujer/i;
 function pickSimVoices(){
   const pref=$("lang").value.slice(0,2);
   const all=speechSynthesis.getVoices();
-  simVoices=all.filter(v=>v.lang.toLowerCase().startsWith(pref));
-  if(!simVoices.length) simVoices=all;
+  let pool=all.filter(v=>v.lang.toLowerCase().startsWith(pref));
+  if(!pool.length) pool=all;
+  simVoices={
+    m: pool.filter(v=>MALE_VOICE.test(v.name)&&!FEMALE_VOICE.test(v.name)),
+    f: pool.filter(v=>FEMALE_VOICE.test(v.name)),
+    any: pool,
+  };
 }
+function voiceFor(idx){
+  const g=SIM_GENDERS[idx]??"m";
+  const pool=simVoices[g].length?simVoices[g]:simVoices.any;
+  if(!pool.length) return null;
+  // si dos participantes comparten género, cada uno cicla a una voz distinta del pool
+  const nth=SIM_GENDERS.slice(0,idx).filter(x=>x===(SIM_GENDERS[idx]??"m")).length;
+  return pool[nth%pool.length];
+}
+let simAudio=null;
 function startSimulation(){
   simIdx=0;
   const canSpeak = "speechSynthesis" in window;
   if(canSpeak){ pickSimVoices(); speechSynthesis.onvoiceschanged=pickSimVoices; }
+  const advance=(delay)=>{ state.activeUntil=Date.now(); simTimer=setTimeout(speakNext, delay); };
+  const speakWithSynth=(idx,f0,text)=>{
+    if(!canSpeak){ state.activeUntil=Date.now()+2400; simTimer=setTimeout(speakNext, 3000); return; }
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang=$("lang").value;
+    const voice=voiceFor(idx);
+    if(voice) u.voice=voice;
+    u.pitch=(simVoices[SIM_GENDERS[idx]??"m"].length) ? Math.max(0.6, Math.min(1.4, f0/165)) : Math.max(0.3, Math.min(2, f0/165));
+    u.rate=1.05;
+    u.onend=()=>advance(700);
+    u.onerror=()=>advance(1200);
+    state.activeUntil=Date.now()+30000;
+    speechSynthesis.speak(u);
+  };
   const speakNext=()=>{
     if(!state.running || !state.sim) return;
     if(simIdx>=SIM_SCRIPT.length){ clearInterval(simPulse); state.rms=0; state.activeIdx=-1; return; }
+    const lineIdx=simIdx;
     const [f0,text]=SIM_SCRIPT[simIdx++];
     const idx=assignSpeaker(f0);
     state.activeIdx=idx;
     addLine(idx, text);
-    if(canSpeak){
-      const u=new SpeechSynthesisUtterance(text);
-      u.lang=$("lang").value;
-      if(simVoices.length) u.voice=simVoices[idx%simVoices.length];
-      u.pitch=Math.max(0.3, Math.min(2, f0/165));  // tono acorde a la voz simulada de cada uno
-      u.rate=1.05;
-      u.onend=()=>{ state.activeUntil=Date.now(); simTimer=setTimeout(speakNext, 700); };
-      u.onerror=()=>{ simTimer=setTimeout(speakNext, 1200); };
-      state.activeUntil=Date.now()+30000;  // la burbuja late mientras dura el audio
-      speechSynthesis.speak(u);
-    } else {
-      state.activeUntil=Date.now()+2400;
-      simTimer=setTimeout(speakNext, 3000);
-    }
+    // audios pregrabados con voces neuronales (audio/sim-N.mp3); fallback: síntesis del sistema
+    simAudio=new Audio("audio/sim-"+lineIdx+".mp3");
+    simAudio.onended=()=>advance(600);
+    simAudio.onerror=()=>speakWithSynth(idx,f0,text);
+    state.activeUntil=Date.now()+30000;  // la burbuja late mientras dura el audio
+    simAudio.play().catch(()=>speakWithSynth(idx,f0,text));
   };
   // diferido: start() marca state.running después de llamar acá
   simTimer=setTimeout(speakNext, 500);

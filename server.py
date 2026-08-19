@@ -236,7 +236,7 @@ class Handler(BaseHTTPRequestHandler):
         if not str(file).startswith(str(STATIC)) or not file.is_file():
             self.send_error(404)
             return
-        content_types = {".html": "text/html", ".js": "text/javascript", ".css": "text/css"}
+        content_types = {".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".mp3": "audio/mpeg"}
         body = file.read_bytes()
         self.send_response(200)
         self.send_header("Content-Type", content_types.get(file.suffix, "application/octet-stream") + "; charset=utf-8")
