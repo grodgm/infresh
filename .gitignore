@@ -1,0 +1,10 @@
+# Secretos — nunca subir
+.env
+
+# Entorno local
+.venv/
+__pycache__/
+server.log
+nohup.out
+.claude/
+.DS_Store

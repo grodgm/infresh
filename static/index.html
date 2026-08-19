@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meeting Companion</title>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#12161f; --panel2:#161b26; --border:#232a38;
+    --text:#e8ecf3; --muted:#8b95a7; --accent:#6ee7ff;
+    --s1:110,231,255; --s2:249,168,212; --s3:134,239,172; --s4:252,211,77; --s5:253,164,175; --s6:147,197,253;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,"SF Pro Text",Segoe UI,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+  header{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--panel);z-index:10}
+  .logo{font-weight:700;font-size:17px;letter-spacing:.3px}
+  .logo span{color:var(--accent)}
+  .status{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted)}
+  .dot{width:9px;height:9px;border-radius:50%;background:#4b5563;transition:background .3s}
+  .dot.on{background:#34d399;box-shadow:0 0 10px #34d39988;animation:pulse 1.6s infinite}
+  @keyframes pulse{50%{opacity:.5}}
+  .timer{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+  .spacer{flex:1}
+  select,button{font:inherit;border-radius:9px;border:1px solid var(--border);background:var(--panel2);color:var(--text);padding:8px 14px;cursor:pointer}
+  select{padding:8px 10px}
+  button:hover{border-color:var(--accent)}
+  #btnStart{background:linear-gradient(135deg,#0ea5e9,#6366f1);border:none;font-weight:600;padding:9px 20px}
+  #btnStart.stop{background:linear-gradient(135deg,#ef4444,#b91c1c)}
+  #btnSim,#btnTranscript{font-size:13px;color:var(--muted)}
+
+  #banner{display:none;padding:8px 20px;font-size:13px;background:#3b2f10;color:#fcd34d;border-bottom:1px solid #5b4a1a;z-index:10}
+  #banner.err{background:#3b1010;color:#fda4af}
+
+  main{flex:1;position:relative;min-height:0;overflow:hidden}
+
+  /* ===== escenario de burbujas ===== */
+  #stage{position:absolute;inset:0;right:340px}
+  #stageHint{position:absolute;top:45%;left:0;right:0;text-align:center;color:var(--muted);font-size:14px;pointer-events:none}
+  #stageHint .big{font-size:42px;margin-bottom:12px;opacity:.6}
+  .bubble{position:absolute;left:0;top:0;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-weight:650;text-align:center;cursor:pointer;user-select:none;will-change:transform;
+    transition:box-shadow .25s;padding:10px}
+  .bubble .name{font-size:15px;text-shadow:0 1px 6px rgba(0,0,0,.6);pointer-events:none}
+  .bubble.renamed .name{font-size:17px}
+
+  /* subtítulo de quien habla */
+  #caption{position:absolute;left:0;right:340px;bottom:26px;display:flex;justify-content:center;pointer-events:none}
+  #captionInner{max-width:70%;background:rgba(10,13,20,.85);border:1px solid var(--border);border-radius:14px;
+    padding:10px 18px;font-size:16px;display:none;backdrop-filter:blur(6px)}
+  #captionInner .who{font-size:12px;font-weight:700;letter-spacing:.5px;margin-bottom:2px}
+
+  /* ===== columna copiloto ===== */
+  #side{position:absolute;top:0;right:0;bottom:0;width:340px;border-left:1px solid var(--border);
+    background:rgba(15,19,28,.75);backdrop-filter:blur(8px);display:flex;flex-direction:column}
+  .col-head{padding:12px 18px 8px;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted)}
+  .scroll{flex:1;overflow-y:auto;padding:4px 16px 16px}
+  .card{border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:12px;background:var(--panel2);
+    padding:12px 14px;margin:0 0 12px;animation:slidein .45s cubic-bezier(.2,.9,.3,1.2)}
+  @keyframes slidein{from{opacity:0;transform:translateX(30px) scale(.97)}to{opacity:1}}
+  .card .tag{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+  .card .title{font-weight:650;margin-bottom:3px}
+  .card .body{font-size:13.5px;color:#c3cad6}
+  .card.insight{border-left-color:#a78bfa}.card.insight .tag{color:#a78bfa}
+  .card.pregunta{border-left-color:#6ee7ff}.card.pregunta .tag{color:#6ee7ff}
+  .card.accion{border-left-color:#34d399}.card.accion .tag{color:#34d399}
+  .card.riesgo{border-left-color:#f87171}.card.riesgo .tag{color:#f87171}
+  .card.dato{border-left-color:#fcd34d}.card.dato .tag{color:#fcd34d}
+  #thinking{display:none;color:var(--muted);font-size:13px;padding:0 0 10px;align-items:center;gap:8px}
+  #thinking.on{display:flex}
+  .spin{width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:rot 1s linear infinite}
+  @keyframes rot{to{transform:rotate(360deg)}}
+
+  /* ===== panel transcript deslizable ===== */
+  #transcriptPanel{position:absolute;top:0;left:0;bottom:0;width:380px;background:rgba(13,16,24,.94);
+    border-right:1px solid var(--border);backdrop-filter:blur(8px);transform:translateX(-100%);
+    transition:transform .3s;display:flex;flex-direction:column;z-index:5}
+  #transcriptPanel.open{transform:none}
+  .line{display:flex;gap:10px;margin:10px 0;animation:fadein .3s}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+  .chip{flex:none;font-size:12px;font-weight:600;padding:2px 10px;border-radius:20px;background:var(--panel2);
+    border:1px solid var(--border);height:fit-content;margin-top:2px;white-space:nowrap}
+  .line .txt{color:var(--text);font-size:14px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">◈ Meeting <span>Companion</span></div>
+  <div class="status"><div class="dot" id="dot"></div><span id="statusTxt">listo</span></div>
+  <div class="timer" id="timer">00:00</div>
+  <div class="spacer"></div>
+  <button id="btnTranscript">☰ Transcript</button>
+  <select id="lang">
+    <option value="es-ES" selected>Español</option>
+    <option value="es-419">Español (LatAm)</option>
+    <option value="en-US">English</option>
+  </select>
+  <button id="btnSim" title="Genera una conversación falsa para probar sin micrófono">Simular</button>
+  <button id="btnStart">▶ Iniciar reunión</button>
+</header>
+
+<div id="banner"></div>
+
+<main>
+  <div id="stage">
+    <div id="stageHint"><div class="big">◈</div>Iniciá la reunión y hablá con normalidad.<br>
+    Cada voz se convierte en una burbuja. Decí «hola, soy [tu nombre]» y la burbuja toma tu nombre.</div>
+  </div>
+  <div id="caption"><div id="captionInner"><div class="who"></div><div class="what"></div></div></div>
+
+  <div id="transcriptPanel">
+    <div class="col-head">🎙 Transcripción</div>
+    <div class="scroll" id="transcript"></div>
+  </div>
+
+  <div id="side">
+    <div class="col-head">✦ Copiloto — sugerencias</div>
+    <div class="scroll" id="suggestions">
+      <div id="thinking"><div class="spin"></div>analizando la conversación…</div>
+    </div>
+  </div>
+</main>
+
+<script>
+"use strict";
+/* ============ Estado global ============ */
+const COLORS = ["--s1","--s2","--s3","--s4","--s5","--s6"];
+const state = {
+  running:false, sim:false, startedAt:0,
+  transcript:[],           // {speaker, speakerIdx, text}
+  speakers:[],             // {name, pitch(log2), color, words, renamed, bubble:{x,y,vx,vy,phase,el}}
+  pitchSamples:[],         // {t, f0}
+  utteranceStart:null,
+  previousTitles:[],
+  lastSentCount:0, demoIndex:0, live:false,
+  rms:0, activeIdx:-1, activeUntil:0,
+};
+const $ = id => document.getElementById(id);
+
+fetch("/api/status").then(r=>r.json()).then(s=>{
+  state.live = s.live;
+  if(!s.live){
+    showBanner("Modo demo: no hay ANTHROPIC_API_KEY en el servidor. Las sugerencias son de ejemplo. Creá un archivo .env con ANTHROPIC_API_KEY=sk-... y reiniciá el servidor.", false);
+  }
+}).catch(()=>{});
+
+/* ============ Detección de pitch (autocorrelación) ============ */
+function detectPitch(buf, sr){
+  let energy=0;
+  for(let i=0;i<buf.length;i++) energy+=buf[i]*buf[i];
+  const rms=Math.sqrt(energy/buf.length);
+  state.rms = state.rms*0.6 + rms*0.4;
+  if(rms<0.012) return null;
+  const minLag=Math.floor(sr/380), maxLag=Math.min(Math.floor(sr/70), buf.length-1);
+  let best=0, bestLag=-1;
+  for(let lag=minLag;lag<=maxLag;lag++){
+    let sum=0;
+    for(let i=0;i<buf.length-lag;i++) sum+=buf[i]*buf[i+lag];
+    const corr=sum/energy;
+    if(corr>best){best=corr;bestLag=lag;}
+  }
+  if(best<0.45||bestLag<0) return null;
+  return sr/bestLag;
+}
+
+/* ============ Clustering de hablantes por voz ============ */
+function median(arr){
+  const s=[...arr].sort((a,b)=>a-b);
+  return s[Math.floor(s.length/2)];
+}
+function nearestCluster(f0){
+  const lf=Math.log2(f0);
+  let bestIdx=-1, bestDist=Infinity;
+  state.speakers.forEach((sp,i)=>{
+    const d=Math.abs(lf-sp.pitch);
+    if(d<bestDist){bestDist=d;bestIdx=i;}
+  });
+  return {bestIdx, bestDist};
+}
+function assignSpeaker(f0){
+  const lf=Math.log2(f0);
+  const {bestIdx, bestDist}=nearestCluster(f0);
+  if(bestIdx>=0 && bestDist<0.17){         // ~2 semitonos de tolerancia
+    const sp=state.speakers[bestIdx];
+    sp.pitch = sp.pitch*0.85 + lf*0.15;    // ajuste suave del perfil de voz
+    return bestIdx;
+  }
+  if(state.speakers.length>=COLORS.length) return bestIdx>=0?bestIdx:0;
+  createSpeaker(lf);
+  return state.speakers.length-1;
+}
+function createSpeaker(lf){
+  const idx=state.speakers.length;
+  const stage=$("stage").getBoundingClientRect();
+  state.speakers.push({
+    name:"Participante "+(idx+1), pitch:lf, color:COLORS[idx], words:0, renamed:false,
+    bubble:{
+      x: stage.width*(0.3+0.4*Math.random()),
+      y: stage.height*(0.3+0.4*Math.random()),
+      vx:0, vy:0, phase:Math.random()*Math.PI*2, el:makeBubble(idx),
+    },
+  });
+  $("stageHint").style.display="none";
+}
+function speakerForWindow(t0,t1){
+  const f0s = state.pitchSamples.filter(s=>s.t>=t0&&s.t<=t1).map(s=>s.f0);
+  if(f0s.length<3){
+    return state.speakers.length ? (state.transcript.at(-1)?.speakerIdx ?? 0) : assignSpeaker(150);
+  }
+  return assignSpeaker(median(f0s));
+}
+
+/* ============ Auto-nombre: "soy X" / "me llamo X" ============ */
+const NAME_PATTERNS=[
+  /\b[Mm]e llamo\s+([\p{L}]+)/u,
+  /\b[Mm]i nombre es\s+([\p{L}]+)/u,
+  /\b[Yy]o soy\s+(\p{Lu}[\p{L}]+)/u,       // «soy X» exige nombre con mayúscula
+  /\b[Ss]oy\s+(\p{Lu}[\p{L}]+)/u,          // para no confundir «soy fanático»
+  /\b[Mm]y name is\s+([\p{L}]+)/u,
+  /\bI'?m\s+(\p{Lu}[\p{L}]+)/u,
+];
+const NOT_NAMES=new Set(["yo","el","la","un","una","muy","tan","bastante","medio","re","super","súper"]);
+function detectName(text){
+  for(const re of NAME_PATTERNS){
+    const m=text.match(re);
+    if(m){
+      const name=m[1].trim();
+      if(name.length>=2 && !NOT_NAMES.has(name.toLowerCase()))
+        return name[0].toUpperCase()+name.slice(1);
+    }
+  }
+  return null;
+}
+function setSpeakerName(idx, name){
+  const sp=state.speakers[idx];
+  if(!sp || sp.name===name) return;
+  sp.name=name; sp.renamed=true;
+  const el=sp.bubble.el;
+  el.querySelector(".name").textContent=name;
+  el.classList.add("renamed");
+  // destello al renombrar
+  el.animate([{filter:"brightness(2.2)"},{filter:"brightness(1)"}],{duration:900});
+  document.querySelectorAll("#transcript .line").forEach((lineEl,i)=>{
+    const line=state.transcript[i];
+    if(line && line.speakerIdx===idx) lineEl.querySelector(".chip").textContent=name;
+  });
+}
+
+/* ============ Burbujas: creación y física ============ */
+function makeBubble(idx){
+  const el=document.createElement("div");
+  el.className="bubble";
+  el.innerHTML='<div class="name"></div>';
+  el.querySelector(".name").textContent="Participante "+(idx+1);
+  el.title="Click para renombrar a mano";
+  el.onclick=()=>{
+    const name=prompt("Nombre del participante:", state.speakers[idx].name);
+    if(name) setSpeakerName(idx, name.trim());
+  };
+  $("stage").appendChild(el);
+  return el;
+}
+function bubbleRadius(sp){ return 55 + Math.min(55, sp.words*0.7); }
+
+function physicsLoop(){
+  const stage=$("stage").getBoundingClientRect();
+  const now=Date.now();
+  const t=now/1000;
+  state.speakers.forEach((sp,i)=>{
+    const b=sp.bubble, r=bubbleRadius(sp);
+    // deriva suave + atracción al centro
+    b.vx += Math.sin(t*0.5+b.phase)*0.012 + (stage.width/2-b.x)*0.00012;
+    b.vy += Math.cos(t*0.4+b.phase*1.3)*0.012 + (stage.height/2-b.y)*0.00012;
+    // repulsión entre burbujas
+    state.speakers.forEach((o,j)=>{
+      if(j===i) return;
+      const dx=b.x-o.bubble.x, dy=b.y-o.bubble.y;
+      const dist=Math.hypot(dx,dy)||1;
+      const minDist=r+bubbleRadius(o)+30;
+      if(dist<minDist){
+        const push=(minDist-dist)*0.012;
+        b.vx+=dx/dist*push; b.vy+=dy/dist*push;
+      }
+    });
+    b.vx*=0.96; b.vy*=0.96;
+    b.x+=b.vx; b.y+=b.vy;
+    b.x=Math.max(r,Math.min(stage.width-r,b.x));
+    b.y=Math.max(r,Math.min(stage.height-r,b.y));
+
+    // reacción al audio de quien habla
+    const active = i===state.activeIdx && now<state.activeUntil;
+    const pulse = active ? 1+Math.min(0.45, state.rms*5) : 1;
+    const rgb=`var(${sp.color})`;
+    const d=r*2;
+    const el=b.el;
+    el.style.width=el.style.height=d+"px";
+    el.style.transform=`translate(${b.x-r}px,${b.y-r}px) scale(${pulse})`;
+    el.style.background=`radial-gradient(circle at 35% 30%, rgba(${rgb},${active?0.55:0.28}), rgba(${rgb},${active?0.22:0.10}) 65%, rgba(${rgb},0.05))`;
+    el.style.border=`1.5px solid rgba(${rgb},${active?0.9:0.35})`;
+    el.style.boxShadow=active?`0 0 ${30+state.rms*300}px rgba(${rgb},0.45)`:`0 0 12px rgba(${rgb},0.12)`;
+  });
+  requestAnimationFrame(physicsLoop);
+}
+requestAnimationFrame(physicsLoop);
+
+/* ============ Audio ============ */
+let audioCtx, analyser, micStream, pitchTimer;
+async function startAudio(){
+  micStream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true}});
+  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  const src = audioCtx.createMediaStreamSource(micStream);
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  src.connect(analyser);
+  const buf = new Float32Array(analyser.fftSize);
+  pitchTimer = setInterval(()=>{
+    analyser.getFloatTimeDomainData(buf);
+    const f0 = detectPitch(buf, audioCtx.sampleRate);
+    if(f0){
+      state.pitchSamples.push({t:Date.now(), f0});
+      if(state.pitchSamples.length>3000) state.pitchSamples.splice(0,1000);
+      // hablante activo en vivo (sin crear clusters nuevos)
+      const {bestIdx,bestDist}=nearestCluster(f0);
+      if(bestIdx>=0 && bestDist<0.22){ state.activeIdx=bestIdx; state.activeUntil=Date.now()+450; }
+    }
+  }, 90);
+}
+function stopAudio(){
+  clearInterval(pitchTimer);
+  micStream?.getTracks().forEach(t=>t.stop());
+  audioCtx?.close();
+  state.rms=0;
+}
+
+/* ============ Reconocimiento de voz ============ */
+let recognition;
+function startRecognition(){
+  const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){
+    showBanner("Este navegador no soporta reconocimiento de voz. Usá Google Chrome, o probá el botón «Simular».", true);
+    return false;
+  }
+  recognition = new SR();
+  recognition.lang = $("lang").value;
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.onresult = ev=>{
+    let interim="";
+    for(let i=ev.resultIndex;i<ev.results.length;i++){
+      const res=ev.results[i];
+      if(res.isFinal){
+        const t1=Date.now();
+        const t0=state.utteranceStart ?? t1-4000;
+        state.utteranceStart=null;
+        addLine(speakerForWindow(t0-800,t1), res[0].transcript.trim());
+      } else {
+        if(!state.utteranceStart) state.utteranceStart=Date.now()-600;
+        interim += res[0].transcript;
+      }
+    }
+    showCaption(interim.trim(), state.activeIdx, true);
+  };
+  recognition.onend = ()=>{ if(state.running && !state.sim) try{recognition.start();}catch(e){} };
+  recognition.onerror = ev=>{
+    if(ev.error==="not-allowed") showBanner("Permiso de micrófono denegado. Habilitalo y recargá la página.", true);
+  };
+  recognition.start();
+  return true;
+}
+
+/* ============ Subtítulo + transcript ============ */
+let captionTimeout;
+function showCaption(text, speakerIdx, isInterim){
+  const inner=$("captionInner");
+  clearTimeout(captionTimeout);
+  if(!text){ inner.style.display="none"; return; }
+  const sp=state.speakers[speakerIdx];
+  inner.style.display="block";
+  inner.querySelector(".who").textContent=sp?.name ?? "…";
+  inner.querySelector(".who").style.color=sp?`rgb(var(${sp.color}))`:"var(--muted)";
+  inner.querySelector(".what").textContent=text;
+  inner.style.opacity=isInterim?0.85:1;
+  if(!isInterim) captionTimeout=setTimeout(()=>{inner.style.display="none";}, 3500);
+}
+function addLine(speakerIdx, text){
+  if(!text) return;
+  const sp=state.speakers[speakerIdx];
+  state.transcript.push({speakerIdx, text});
+  if(sp) sp.words += text.split(/\s+/).length;
+  const name=detectName(text);
+  if(name) setSpeakerName(speakerIdx, name);
+  showCaption(text, speakerIdx, false);
+
+  const el=document.createElement("div");
+  el.className="line";
+  const chip=document.createElement("div");
+  chip.className="chip";
+  chip.textContent=state.speakers[speakerIdx]?.name ?? "?";
+  chip.style.color=`rgb(var(${sp?.color??"--s1"}))`;
+  chip.style.borderColor=`rgba(var(${sp?.color??"--s1"}),0.5)`;
+  el.appendChild(chip);
+  const txt=document.createElement("div");
+  txt.className="txt"; txt.textContent=text;
+  el.appendChild(txt);
+  $("transcript").appendChild(el);
+  $("transcript").scrollTop=1e9;
+}
+function showBanner(msg, isErr){
+  const b=$("banner");
+  b.style.display="block";
+  b.className=isErr?"err":"";
+  b.textContent=(isErr?"✕ ":"⚠ ")+msg;
+}
+$("btnTranscript").onclick=()=>$("transcriptPanel").classList.toggle("open");
+
+/* ============ Copiloto: ciclo de sugerencias ============ */
+const TAGS={insight:"💡 Insight", pregunta:"❓ Pregunta", accion:"✅ Acción", riesgo:"⚠️ Riesgo", dato:"📊 Dato"};
+let suggestTimer;
+async function suggestCycle(){
+  if(state.transcript.length===state.lastSentCount) return;
+  state.lastSentCount=state.transcript.length;
+  $("thinking").classList.add("on");
+  try{
+    const res=await fetch("/api/suggest",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        transcript: state.transcript.map(l=>({speaker:state.speakers[l.speakerIdx]?.name??"?", text:l.text})),
+        previous_titles: state.previousTitles.slice(-20),
+        demo_index: state.demoIndex++,
+      }),
+    });
+    const data=await res.json();
+    if(data.error) showBanner(data.error, true);
+    (data.suggestions||[]).forEach(addCard);
+  }catch(e){ /* servidor caído: reintenta en el próximo ciclo */ }
+  $("thinking").classList.remove("on");
+}
+function addCard(s){
+  state.previousTitles.push(s.title||s.text.slice(0,40));
+  const card=document.createElement("div");
+  card.className="card "+(TAGS[s.type]?s.type:"insight");
+  card.innerHTML=`<div class="tag">${TAGS[s.type]??TAGS.insight}</div>`+
+    (s.title?`<div class="title"></div>`:"")+`<div class="body"></div>`;
+  if(s.title) card.querySelector(".title").textContent=s.title;
+  card.querySelector(".body").textContent=s.text;
+  $("suggestions").insertBefore(card, $("thinking").nextSibling);
+}
+
+/* ============ Ciclo principal ============ */
+let timerInterval;
+async function start(sim){
+  state.sim=!!sim;
+  if(!sim){
+    try{ await startAudio(); }
+    catch(e){ showBanner("No se pudo acceder al micrófono: "+e.message, true); return; }
+    if(!startRecognition()){ stopAudio(); return; }
+  } else {
+    startSimulation();
+  }
+  state.running=true;
+  state.startedAt=Date.now();
+  $("dot").classList.add("on");
+  $("statusTxt").textContent=sim?"simulando":"escuchando";
+  $("btnStart").textContent="■ Terminar";
+  $("btnStart").classList.add("stop");
+  suggestTimer=setInterval(suggestCycle, state.live?15000:8000);
+  timerInterval=setInterval(()=>{
+    const s=Math.floor((Date.now()-state.startedAt)/1000);
+    $("timer").textContent=String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
+  },1000);
+}
+function stop(){
+  state.running=false;
+  clearInterval(suggestTimer); clearInterval(timerInterval); clearInterval(simTimer); clearInterval(simPulse);
+  try{recognition?.stop();}catch(e){}
+  if(!state.sim) stopAudio();
+  state.rms=0; state.activeIdx=-1;
+  $("dot").classList.remove("on");
+  $("statusTxt").textContent="finalizada";
+  $("btnStart").textContent="▶ Iniciar reunión";
+  $("btnStart").classList.remove("stop");
+  suggestCycle(); // última pasada
+}
+$("btnStart").onclick=()=> state.running?stop():start(false);
+$("btnSim").onclick=()=>{ if(!state.running) start(true); };
+
+/* ============ Simulación (probar sin micrófono) ============ */
+const SIM_SCRIPT=[
+  [110,"Bueno, arranquemos. Yo soy Marito y hoy tenemos que definir el lanzamiento de la app de vocabulario."],
+  [210,"Hola, me llamo Carla. Vi los números de la beta y la retención al día siete está en veintidós por ciento."],
+  [110,"¿Eso es bueno o malo? No tengo referencia para apps educativas."],
+  [165,"Soy Gonzalo, aporto contexto: para kids apps el benchmark está entre veinticinco y treinta y cinco."],
+  [210,"El problema me parece que es el onboarding, los padres abandonan antes de crear el perfil del hijo."],
+  [110,"Podríamos sacar el registro obligatorio y pedirlo después del primer juego."],
+  [165,"Ojo que sin registro no podemos guardar el progreso, habría que guardarlo local primero."],
+  [210,"Me gusta. ¿Quién lo puede prototipar para la semana que viene?"],
+  [110,"Lo agarro yo, pero necesito que diseño me pase los flujos actualizados antes del jueves."],
+  [165,"También tendríamos que decidir si el lanzamiento va con precio único o suscripción."],
+];
+let simTimer, simPulse, simIdx=0;
+function startSimulation(){
+  simIdx=0;
+  simTimer=setInterval(()=>{
+    if(simIdx>=SIM_SCRIPT.length){clearInterval(simTimer);clearInterval(simPulse);state.rms=0;state.activeIdx=-1;return;}
+    const [f0,text]=SIM_SCRIPT[simIdx++];
+    const idx=assignSpeaker(f0);
+    state.activeIdx=idx;
+    state.activeUntil=Date.now()+2400;
+    addLine(idx, text);
+  }, 3000);
+  simPulse=setInterval(()=>{ state.rms=0.03+Math.abs(Math.sin(Date.now()/140))*0.06; }, 60);
+}
+</script>
+</body>
+</html>
