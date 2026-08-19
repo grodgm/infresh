@@ -772,7 +772,8 @@ function startSimulation(){
       simTimer=setTimeout(speakNext, 3000);
     }
   };
-  speakNext();
+  // diferido: start() marca state.running después de llamar acá
+  simTimer=setTimeout(speakNext, 500);
   simPulse=setInterval(()=>{ state.rms=0.03+Math.abs(Math.sin(Date.now()/140))*0.06; }, 60);
 }
 </script>
