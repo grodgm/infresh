@@ -42,23 +42,46 @@ if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
 
     client = anthropic.Anthropic()
 
-SYSTEM_PROMPT = """Sos una superinteligencia que acompaña reuniones en vivo. Recibís el \
-transcript parcial de una reunión (con hablantes detectados automáticamente) y tu único \
-trabajo es nutrir la conversación con aportes breves y de alto valor.
+SYSTEM_PROMPT = """Sos Infresh, una inteligencia que facilita reuniones de equipo en vivo. Tu trabajo no es \
+documentar: es mejorar la calidad del pensamiento grupal mientras sucede. Recibís el contexto \
+organizacional (prioridades estratégicas del liderazgo, contexto del equipo, objetivo y agenda de la \
+reunión), datos de participación por persona, y el transcript parcial (hablantes detectados por voz).
 
 Devolvé EXCLUSIVAMENTE un objeto JSON válido, sin markdown ni texto extra, con esta forma:
-{"suggestions": [{"type": "insight|pregunta|accion|riesgo|dato", "title": "...", "text": "..."}]}
+{"suggestions": [{"type": "...", "title": "...", "text": "..."}]}
 
-Reglas:
-- Máximo 2 sugerencias por llamada. Si el transcript nuevo no amerita nada valioso, devolvé {"suggestions": []}.
-- "insight": una conexión o reencuadre que los participantes no están viendo.
-- "pregunta": una pregunta puntual que destrabaría o profundizaría la conversación.
+Tipos de intervención (elegí el que más valor aporte AHORA):
+- "foco": la conversación se desvió del tema de agenda actual o del objetivo. Nombralo y proponé volver.
+- "decision": el grupo está tomando una decisión sin nombrarla. Explicitala para que la confirmen o la desafíen.
+- "equilibrio": mirando la participación, alguien domina la conversación o alguien casi no habló. Sugerí dar voz (con nombres).
+- "alineacion": conectá lo que están hablando con una prioridad estratégica de la organización (a favor o en tensión).
+- "pregunta": una pregunta puntual que destrabaría o profundizaría la conversación estancada.
 - "accion": un próximo paso concreto que se desprende de lo hablado (con responsable si se nombró).
 - "riesgo": algo que están pasando por alto y puede costarles caro.
+- "insight": una conexión o reencuadre que los participantes no están viendo.
 - "dato": contexto factual relevante que eleva la discusión.
-- title: máximo 6 palabras. text: máximo 30 palabras. Español rioplatense, directo, sin relleno.
-- No repitas sugerencias ya dadas (te paso los títulos previos).
+
+Reglas:
+- Máximo 2 intervenciones por llamada. Si el tramo nuevo no amerita nada valioso, devolvé {"suggestions": []}. Intervenir de más es peor que no intervenir.
+- Priorizá foco/decision/equilibrio/alineacion (facilitación) sobre insight/dato (contenido).
+- "equilibrio" solo con señal clara (una persona >60% de las palabras, o alguien en silencio con la reunión avanzada). No lo repitas si ya lo dijiste.
+- title: máximo 6 palabras. text: máximo 30 palabras. Español rioplatense, directo, sin relleno. Hablale al equipo, no sobre el equipo.
+- No repitas intervenciones ya dadas (te paso los títulos previos).
 - El transcript viene de reconocimiento de voz: puede tener errores, interpretá con criterio."""
+
+SUMMARY_PROMPT = """Sos Infresh. La reunión terminó. Con el contexto organizacional y el transcript completo, \
+generá el cierre que se convierte en memoria organizacional.
+
+Devolvé EXCLUSIVAMENTE un objeto JSON válido, sin markdown ni texto extra:
+{"resumen": "...", "decisiones": ["..."], "acciones": [{"que": "...", "quien": "..."}], "pendientes": ["..."], "compartir_con": [{"quien": "...", "motivo": "..."}]}
+
+Reglas:
+- resumen: máximo 80 palabras, qué pasó y qué cambió.
+- decisiones: solo decisiones realmente tomadas (no ideas sueltas). Si no hubo, lista vacía.
+- acciones: compromisos concretos; "quien" con el nombre si se dijo, sino "sin asignar".
+- pendientes: temas abiertos que quedaron sin resolver.
+- compartir_con: roles o equipos de la organización que deberían ver esto (ej: "Liderazgo/C-level", "Equipo de diseño"), con motivo de una línea. Basate en las prioridades estratégicas y en lo hablado.
+- Español rioplatense, directo. Sin inventar nada que no esté en el transcript."""
 
 DEMO_SUGGESTIONS = [
     {"type": "dato", "title": "Modo demo activo", "text": "No hay ANTHROPIC_API_KEY configurada. Estas sugerencias son simuladas; con la clave, Claude analiza la conversación real."},
@@ -69,17 +92,38 @@ DEMO_SUGGESTIONS = [
 ]
 
 
-def build_user_message(payload: dict) -> str:
-    lines = payload.get("transcript", [])
-    previous = payload.get("previous_titles", [])
+def build_user_message(payload: dict, closing: bool = False) -> str:
+    lines = payload.get("transcript", [])[-300:]
+    previous = payload.get("previous_titles", [])[-20:]
+    cfg = payload.get("config", {}) or {}
+    participacion = payload.get("participacion", []) or []
+    parts = []
+    if cfg.get("prioridades"):
+        parts.append(f"PRIORIDADES ESTRATÉGICAS DE LA ORGANIZACIÓN:\n{cfg['prioridades']}")
+    if cfg.get("contexto"):
+        parts.append(f"CONTEXTO DEL EQUIPO:\n{cfg['contexto']}")
+    if cfg.get("objetivo"):
+        parts.append(f"OBJETIVO DE LA REUNIÓN: {cfg['objetivo']}")
+    if cfg.get("agenda"):
+        parts.append("AGENDA: " + " / ".join(cfg["agenda"]))
+    if not closing and cfg.get("tema_actual"):
+        parts.append(f"TEMA DE AGENDA ACTUAL: {cfg['tema_actual']}")
+    if participacion:
+        total = sum(p.get("palabras", 0) for p in participacion) or 1
+        parts.append("PARTICIPACIÓN (palabras): " + ", ".join(
+            f"{p.get('speaker', '?')}: {p.get('palabras', 0)} ({round(100 * p.get('palabras', 0) / total)}%)"
+            for p in participacion
+        ))
+    if payload.get("minutos") is not None:
+        parts.append(f"MINUTOS DE REUNIÓN: {payload['minutos']}")
     transcript_text = "\n".join(
         f"[{line.get('speaker', '?')}] {line.get('text', '')}" for line in lines
     )
-    parts = ["TRANSCRIPT DE LA REUNIÓN HASTA AHORA:", transcript_text or "(vacío)"]
-    if previous:
-        parts.append("\nSUGERENCIAS YA DADAS (no repetir):")
-        parts.extend(f"- {t}" for t in previous)
-    return "\n".join(parts)
+    label = "TRANSCRIPT COMPLETO DE LA REUNIÓN:" if closing else "TRANSCRIPT DE LA REUNIÓN HASTA AHORA:"
+    parts.append(f"{label}\n{transcript_text or '(vacío)'}")
+    if previous and not closing:
+        parts.append("INTERVENCIONES YA DADAS (no repetir):\n" + "\n".join(f"- {t}" for t in previous))
+    return "\n\n".join(parts)
 
 
 def parse_suggestions(text: str) -> list:
@@ -101,41 +145,72 @@ def parse_suggestions(text: str) -> list:
     return out[:3]
 
 
-def get_suggestions(payload: dict) -> dict:
-    if client is None:
-        idx = payload.get("demo_index", 0) % len(DEMO_SUGGESTIONS)
-        return {"demo": True, "suggestions": [DEMO_SUGGESTIONS[idx]]}
+DEMO_SUMMARY = {
+    "demo": True,
+    "resumen": "Modo demo: sin ANTHROPIC_API_KEY el cierre es de ejemplo. El equipo revisó la retención de la beta, acordó probar registro diferido y dejó abierto el modelo de precios.",
+    "decisiones": ["Probar onboarding con registro diferido guardando progreso local"],
+    "acciones": [{"que": "Prototipar el registro diferido", "quien": "Marito"}],
+    "pendientes": ["Modelo de precios: único vs. suscripción"],
+    "compartir_con": [{"quien": "Liderazgo/C-level", "motivo": "Impacta el plan de lanzamiento de septiembre"}],
+}
 
+
+def call_claude(system_prompt: str, user_message: str, effort: str, max_tokens: int):
+    """Devuelve (texto, error). Usa el mismo manejo de errores para suggest y summary."""
     import anthropic
 
     try:
         response = client.messages.create(
             model=MODEL,
-            max_tokens=2000,
-            output_config={"effort": "low"},
+            max_tokens=max_tokens,
+            output_config={"effort": effort},
             system=[
                 {
                     "type": "text",
-                    "text": SYSTEM_PROMPT,
+                    "text": system_prompt,
                     "cache_control": {"type": "ephemeral"},
                 }
             ],
-            messages=[{"role": "user", "content": build_user_message(payload)}],
+            messages=[{"role": "user", "content": user_message}],
         )
     except anthropic.RateLimitError:
-        return {"error": "Rate limit — reintentando en el próximo ciclo.", "suggestions": []}
+        return None, "Rate limit — reintentá en un momento."
     except anthropic.AuthenticationError:
-        return {"error": "Clave API inválida.", "suggestions": []}
+        return None, "Clave API inválida."
     except anthropic.APIStatusError as exc:
-        return {"error": f"Error de API ({exc.status_code}).", "suggestions": []}
+        return None, f"Error de API ({exc.status_code})."
     except anthropic.APIConnectionError:
-        return {"error": "Sin conexión con la API.", "suggestions": []}
+        return None, "Sin conexión con la API."
+    return "".join(block.text for block in response.content if block.type == "text"), None
 
-    text = "".join(block.text for block in response.content if block.type == "text")
+
+def get_suggestions(payload: dict) -> dict:
+    if client is None:
+        idx = payload.get("demo_index", 0) % len(DEMO_SUGGESTIONS)
+        return {"demo": True, "suggestions": [DEMO_SUGGESTIONS[idx]]}
+    text, error = call_claude(SYSTEM_PROMPT, build_user_message(payload), "low", 2000)
+    if error:
+        return {"error": error, "suggestions": []}
     try:
         return {"suggestions": parse_suggestions(text)}
     except (json.JSONDecodeError, ValueError):
         return {"suggestions": []}
+
+
+def get_summary(payload: dict) -> dict:
+    if client is None:
+        return DEMO_SUMMARY
+    text, error = call_claude(SUMMARY_PROMPT, build_user_message(payload, closing=True), "medium", 3000)
+    if error:
+        return {"error": error}
+    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip())
+    match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+    if not match:
+        return {"error": "No se pudo generar el cierre."}
+    try:
+        return json.loads(match.group(0))
+    except json.JSONDecodeError:
+        return {"error": "No se pudo generar el cierre."}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -170,7 +245,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self):
-        if self.path != "/api/suggest":
+        if self.path not in ("/api/suggest", "/api/summary"):
             self.send_error(404)
             return
         length = int(self.headers.get("Content-Length", 0))
@@ -179,7 +254,8 @@ class Handler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             self._send_json({"error": "JSON inválido", "suggestions": []}, 400)
             return
-        self._send_json(get_suggestions(payload))
+        handler = get_summary if self.path == "/api/summary" else get_suggestions
+        self._send_json(handler(payload))
 
 
 if __name__ == "__main__":
