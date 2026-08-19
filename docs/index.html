@@ -258,10 +258,10 @@ function readConfig(){
   state.config={objetivo:raw.Objetivo, agenda, prioridades:raw.Prioridades, contexto:raw.Contexto};
 }
 const DEMO_CFG={
-  Objetivo:"Definir el plan de lanzamiento de la app de vocabulario",
-  Agenda:"Métricas de la beta | 5\nOnboarding y registro | 10\nModelo de precios | 10",
-  Prioridades:"1) Retención antes que adquisición. 2) Lanzar en LatAm en 2027. 3) Cuidar el burn: no sumar headcount.",
-  Contexto:"Equipo de producto de Papumba, 3 personas. La beta lleva 6 semanas y el lanzamiento está planificado para septiembre.",
+  Objetivo:"Definir la estrategia de defensa de Rivelia frente a la entrada de biosimilares en LatAm",
+  Agenda:"Situación regulatoria y competitiva | 10\nEstrategia de acceso y contratos | 20\nPresupuesto y próximos pasos | 15",
+  Prioridades:"1) Sostener el liderazgo en inmunología pese a las pérdidas de exclusividad. 2) Acelerar el acceso de pacientes a terapias innovadoras en LatAm. 3) Migrar a modelos de contratación basados en valor con los financiadores clave.",
+  Contexto:"Comité ejecutivo LatAm de una farmacéutica global. Rivelia, el biológico líder de la compañía en inmunología, enfrenta la entrada de biosimilares en Argentina, Colombia y México durante los próximos dos trimestres.",
 };
 
 /* ============ Agenda en vivo ============ */
@@ -729,20 +729,22 @@ $("btnSim").onclick=()=>{
 
 /* ============ Simulación ============ */
 const SIM_SCRIPT=[
-  [110,"Bueno, arranquemos. Yo soy Marito y hoy tenemos que definir el lanzamiento de la app de vocabulario."],
-  [210,"Hola, me llamo Carla. Vi los números de la beta y la retención al día siete está en veintidós por ciento."],
-  [110,"¿Eso es bueno o malo? No tengo referencia para apps educativas."],
-  [165,"Soy Gonzalo, aporto contexto: para kids apps el benchmark está entre veinticinco y treinta y cinco."],
-  [210,"El problema me parece que es el onboarding, los padres abandonan antes de crear el perfil del hijo."],
-  [110,"Podríamos sacar el registro obligatorio y pedirlo después del primer juego."],
-  [165,"Ojo que sin registro no podemos guardar el progreso, habría que guardarlo local primero."],
-  [210,"Me gusta. ¿Quién lo puede prototipar para la semana que viene?"],
-  [110,"Lo agarro yo, pero necesito que diseño me pase los flujos actualizados antes del jueves."],
-  [165,"También tendríamos que decidir si el lanzamiento va con precio único o suscripción."],
+  [110,"Buen día, soy Mariano, arranquemos. Tenemos cuarenta y cinco minutos para definir la estrategia frente a la entrada de biosimilares de Rivelia en la región."],
+  [210,"Hola, me llamo Cecilia. Desde médica: el biosimilar ya tiene aprobación regulatoria en Argentina y Colombia, y esperamos que México apruebe antes de fin de año."],
+  [155,"Soy Federico. En acceso, dos financiadores grandes ya nos pidieron renegociar precio. Si no movemos algo este trimestre, arriesgamos el treinta por ciento del volumen."],
+  [255,"Yo soy Lucía, de finanzas. Rivelia es el dieciocho por ciento del revenue regional. Cada punto de share que perdemos son casi dos millones de dólares anuales."],
+  [110,"¿Cuál es la propuesta concreta? ¿Defendemos precio o defendemos volumen?"],
+  [155,"Propongo contratos de riesgo compartido con los tres financiadores principales, atados a resultados clínicos. Mantenemos precio de lista y damos valor por evidencia."],
+  [210,"Para eso necesito reforzar la generación de evidencia de vida real. Hoy el registro de pacientes está subfinanciado, y sin eso el contrato por resultados no se sostiene."],
+  [255,"Puedo liberar presupuesto del segundo semestre, pero sale del marketing de la línea madura. Alguien tiene que aceptar ese trade-off."],
+  [110,"Ok, asumo yo esa conversación con el equipo comercial. ¿Qué necesitamos del regional para avanzar?"],
+  [155,"Aprobación del comité de pricing para el esquema de riesgo compartido. Si entra en la agenda de octubre, llegamos a cerrar contratos antes del lanzamiento del biosimilar en México."],
+  [210,"También sugiero adelantar el advisory board con los líderes de opinión de inmunología, así la evidencia llega con respaldo clínico."],
+  [255,"Última cosa: si esto funciona con Rivelia, el mismo modelo nos sirve para la próxima pérdida de exclusividad en dos años. Vale documentarlo bien."],
 ];
 let simTimer, simPulse, simIdx=0, simVoices={m:[],f:[],any:[]};
-// género de cada participante simulado, en orden de aparición: Marito, Carla, Gonzalo
-const SIM_GENDERS=["m","f","m"];
+// género de cada participante simulado, en orden de aparición: Mariano, Cecilia, Federico, Lucía
+const SIM_GENDERS=["m","f","m","f"];
 const MALE_VOICE=/jorge|diego|juan|carlos|andr[eé]s|enrique|pablo|miguel|dami[aá]n|arthur|daniel|reed|rocko|eddy|grandpa|male|hombre/i;
 const FEMALE_VOICE=/m[oó]nica|paulina|luciana|isabela|francisca|soledad|ang[eé]lica|helena|sabina|marisol|pen[eé]lope|lupe|carmen|catalina|shelley|sandy|flo\b|grandma|female|mujer/i;
 function pickSimVoices(){
