@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Infresh — La misión (prototipo MVP)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,300;0,400;0,600;1,300&family=DM+Sans:wght@400;500;600&family=Caveat:wght@600&display=swap">
+<style>
+  :root{
+    --text:#1A1460; --muted:#4E5077; --accent:#5B32EC; --magenta:#D400E6; --border:#e9e9f2; --soft:#F7F7FC;
+    --grad:linear-gradient(90deg,#5B32EC,#D400E6);
+    --shadow:0 1px 3px rgba(26,20,96,.06), 0 12px 34px -16px rgba(26,20,96,.16);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#fff;color:var(--text);font:15.5px/1.55 "DM Sans",-apple-system,sans-serif;min-height:100vh}
+  h1,h2{font-family:Raleway}
+  button{font:inherit;cursor:pointer;border-radius:999px;border:1px solid var(--border);background:#fff;color:var(--text);padding:9px 20px;transition:all .15s}
+  button:hover{border-color:var(--accent)}
+  .cta{background:var(--grad);color:#fff;border:none;font-weight:600;padding:12px 28px;font-size:15.5px}
+  .cta:hover{opacity:.92}
+
+  header{display:flex;align-items:center;gap:14px;padding:14px 26px}
+  .logo img{height:24px;display:block}
+  .spacer{flex:1}
+  a.back{font-size:13px;color:var(--muted);text-decoration:none}
+  a.back:hover{color:var(--accent)}
+  .beta{font-size:10.5px;font-weight:700;letter-spacing:1px;color:#fff;background:var(--grad);border-radius:20px;padding:2px 9px}
+
+  /* ================= MOMENTO 1: la invitación ================= */
+  #invite{max-width:640px;margin:0 auto;padding:26px 24px 80px;animation:up .7s}
+  @keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1}}
+  .kicker{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--magenta);font-weight:700;margin-bottom:10px}
+  #invite h1{font-weight:300;font-size:34px;line-height:1.2;letter-spacing:-.5px;margin-bottom:26px}
+  #invite h1 b{font-weight:600}
+
+  .ceo{display:flex;gap:16px;background:var(--soft);border-radius:20px;padding:22px 24px;margin-bottom:14px;position:relative}
+  .ceo .ava{flex:none;width:52px;height:52px;border-radius:50%;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:19px}
+  .ceo blockquote{font-family:Raleway;font-weight:300;font-size:18.5px;line-height:1.5;font-style:italic}
+  .ceo .sign{margin-top:10px;font-family:Caveat,cursive;font-size:22px;color:var(--accent)}
+  .ceo .sign small{font-family:"DM Sans";font-size:12px;color:var(--muted);font-style:normal;margin-left:8px}
+
+  .why{border-left:3px solid var(--accent);padding:4px 0 4px 16px;margin:22px 2px;color:var(--muted);font-size:15px}
+  .why b{color:var(--text)}
+
+  .gift{margin:26px 0 8px}
+  .gift .gt{font-size:13px;font-weight:650;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+  .gcards{display:flex;gap:12px;flex-wrap:wrap}
+  .gcard{flex:1;min-width:230px;border:1px solid var(--border);border-radius:16px;padding:14px 16px;font-size:13.5px;box-shadow:0 1px 3px rgba(26,20,96,.05);transform:rotate(-.4deg)}
+  .gcard:last-child{transform:rotate(.5deg)}
+  .gcard .from{font-weight:650;font-size:12.5px;margin-bottom:4px;color:var(--accent)}
+  .gcard p{color:var(--muted)}
+  .gift .note{font-size:13px;color:var(--muted);margin-top:10px}
+  .gift .note b{color:var(--text)}
+
+  .ask{margin-top:28px;background:#fff;border:1.5px dashed #cfc8f5;border-radius:18px;padding:18px 20px}
+  .ask label{display:block;font-size:15px;margin-bottom:10px}
+  .ask input{width:100%;border:none;border-bottom:1.5px solid var(--border);border-radius:0;padding:8px 2px;font-size:16px;font-family:Caveat,cursive;font-size:21px;color:var(--accent);background:transparent}
+  .ask input:focus{outline:none;border-bottom-color:var(--accent)}
+  #inviteActions{display:flex;gap:12px;align-items:center;margin-top:26px}
+  #skip{border:none;color:var(--muted);font-size:13.5px}
+
+  .term-pick{margin-top:34px;font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center}
+  .term-pick select{font:inherit;border:1px solid var(--border);border-radius:8px;padding:3px 8px;color:var(--text)}
+
+  /* ================= MOMENTO 2: la reunión ================= */
+  #meeting{display:none;position:fixed;inset:0;background:#fff;flex-direction:column}
+  #meeting.on{display:flex}
+  #mHead{display:flex;align-items:center;gap:14px;padding:13px 26px;border-bottom:1px solid var(--border)}
+  .rec{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted)}
+  .rec .dot{width:9px;height:9px;border-radius:50%;background:#34d399;animation:pulse 1.7s infinite}
+  @keyframes pulse{50%{opacity:.4}}
+
+  #question{max-width:760px;margin:34px auto 8px;text-align:center;padding:0 24px}
+  #question .q{font-family:Raleway;font-weight:300;font-size:30px;line-height:1.3;letter-spacing:-.4px}
+  #question svg{display:block;margin:8px auto 0}
+  #question .src{font-size:12.5px;color:var(--muted);margin-top:10px}
+
+  #board{flex:1;max-width:860px;width:100%;margin:12px auto 0;padding:6px 24px 120px;display:flex;gap:34px;justify-content:center;align-items:flex-start;overflow:auto}
+  .col{flex:1;max-width:360px}
+  .col h3{font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);font-weight:650;margin-bottom:14px;text-align:center}
+  .chip{background:#fff;border:1px solid var(--border);border-radius:14px;padding:11px 15px;margin-bottom:11px;font-size:14.5px;
+    box-shadow:0 2px 10px rgba(26,20,96,.07);display:flex;gap:9px;align-items:flex-start;animation:chipin .6s cubic-bezier(.2,.9,.3,1.25)}
+  .chip .em{font-size:16px;margin-top:1px}
+  .chip:nth-child(odd){transform:rotate(-.5deg)}
+  .chip:nth-child(even){transform:rotate(.5deg)}
+  @keyframes chipin{from{opacity:0;transform:translateY(16px) scale(.92)}to{opacity:1}}
+
+  #liveline{position:fixed;left:0;right:0;bottom:22px;display:flex;justify-content:center;pointer-events:none}
+  #livelineInner{max-width:62%;background:rgba(255,255,255,.96);border:1px solid var(--border);border-radius:999px;
+    padding:8px 22px;font-size:14px;color:var(--muted);display:none;box-shadow:var(--shadow);font-style:italic}
+
+  /* ===== la manito ===== */
+  #hand{position:fixed;right:26px;bottom:26px;width:64px;height:64px;border-radius:50%;background:#fff;border:1.5px solid var(--border);
+    box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;z-index:20;
+    transition:transform .5s cubic-bezier(.2,.9,.3,1.4), box-shadow .4s;transform:scale(0);user-select:none}
+  #hand.l1{transform:scale(1)}
+  #hand.l2{transform:scale(1.22);border-color:#c9baf7}
+  #hand.l3{transform:scale(1.5);border-color:var(--accent);box-shadow:0 0 0 8px rgba(91,50,236,.10), var(--shadow);animation:wave 1.1s infinite}
+  @keyframes wave{0%,100%{rotate:0deg}25%{rotate:14deg}75%{rotate:-8deg}}
+  #hand .badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:12px;background:var(--grad);color:#fff;
+    font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px}
+  #handTip{position:fixed;right:100px;bottom:38px;background:var(--text);color:#fff;font-size:12.5px;border-radius:10px;padding:6px 12px;
+    opacity:0;transition:opacity .3s;pointer-events:none;z-index:20}
+  #handTip.on{opacity:.94}
+
+  /* ===== panel de aportes ===== */
+  #panel{position:fixed;top:0;right:-390px;bottom:0;width:380px;background:#fff;border-left:1px solid var(--border);
+    box-shadow:-12px 0 34px -18px rgba(26,20,96,.25);transition:right .45s cubic-bezier(.2,.9,.3,1.1);z-index:25;display:flex;flex-direction:column}
+  #panel.on{right:0}
+  #panel .ph{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border)}
+  #panel .ph b{font-family:Raleway;font-weight:600}
+  #panel .ph button{margin-left:auto;border:none;font-size:18px;color:var(--muted);padding:2px 8px}
+  #aportes{flex:1;overflow-y:auto;padding:16px}
+  .aporte{border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:13px;animation:chipin .5s}
+  .aporte .at{font-size:11px;font-weight:750;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+  .aporte.conexion .at{color:#2F6BE8}
+  .aporte.dato .at{color:#b45309}
+  .aporte.powerup .at{color:var(--magenta)}
+  .aporte.contexto .at{color:#0a8a5f}
+  .aporte p{font-size:14px;color:#33305e}
+  .aporte .go{margin-top:10px;background:var(--grad);color:#fff;border:none;font-size:13.5px;font-weight:600;padding:8px 16px}
+  .fb{display:flex;gap:6px;margin-top:10px}
+  .fb button{border:1px solid var(--border);background:var(--soft);font-size:13px;padding:4px 12px}
+  .fb button.sel{background:#EFECFD;border-color:var(--accent)}
+  .thanks{font-size:12px;color:var(--muted);margin-left:6px;align-self:center;opacity:0;transition:opacity .3s}
+  .thanks.on{opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><img src="https://infresh.ai/assets/infresh-logo-BuO8dKHd.png" alt="Infresh" onerror="this.outerHTML='<b>infresh</b>'"></div>
+  <div class="beta">PROTOTIPO MVP</div>
+  <div class="spacer"></div>
+  <a class="back" href="matriz.html">matriz β</a>
+  <a class="back" href="index.html">companion</a>
+</header>
+
+<!-- ================= MOMENTO 1 ================= -->
+<section id="invite">
+  <div class="kicker">Tu <span class="term">squad</span> fue invitado a una misión</div>
+  <h1>Diego quiere que <b>tu <span class="term">squad</span></b> entre en esto.</h1>
+
+  <div class="ceo">
+    <div class="ava">D</div>
+    <div>
+      <blockquote>«Este trimestre me quita el sueño una sola cosa: los usuarios que se van en la segunda semana. Si resolvemos eso, todo lo demás se acomoda. No quiero un plan perfecto, quiero a cada <span class="term">squad</span> mirando su pedazo del problema.»</blockquote>
+      <div class="sign">Diego <small>CEO · grabado ayer, sin guión</small></div>
+    </div>
+  </div>
+
+  <div class="why"><b>¿Por qué ustedes?</b> El 70% del abandono de la semana 2 pasa dentro del onboarding — y el onboarding es de tu <span class="term">squad</span>. Nadie más puede mover esta aguja.</div>
+
+  <div class="gift">
+    <div class="gt">Lo que otros equipos ya pusieron sobre la mesa</div>
+    <div class="gcards">
+      <div class="gcard"><div class="from">Growth · hace 3 días</div><p>Probaron notificaciones push en abril: +8% de retorno, pero +12% de opt-out. Decidieron: solo transaccionales.</p></div>
+      <div class="gcard"><div class="from">Data · ayer</div><p>Cohortes nuevas: el 70% del drop de semana 2 ocurre antes de terminar el onboarding.</p></div>
+    </div>
+    <div class="note">Esto es lo que ganás por compartir: <b>lo que tu <span class="term">squad</span> descubra vuelve multiplicado</b> — Infresh se lo acerca a los equipos que lo necesiten, con tu crédito.</div>
+  </div>
+
+  <div class="ask">
+    <label>Antes de entrar — una sola pregunta: <b>¿qué está moviendo tu <span class="term">squad</span> respecto a esto?</b></label>
+    <input id="ctx" placeholder="escribilo como se lo contarías a un compañero…" autocomplete="off">
+  </div>
+
+  <div id="inviteActions">
+    <button class="cta" id="btnEnter">Entrar a la reunión →</button>
+    <button id="skip">entrar sin responder</button>
+  </div>
+
+  <div class="term-pick">✏️ Che, ¿cómo le dicen ustedes?
+    <select id="termSel">
+      <option value="squad" selected>squad</option>
+      <option value="equipo">equipo</option>
+      <option value="célula">célula</option>
+      <option value="team">team</option>
+      <option value="tribu">tribu</option>
+    </select>
+    <span style="opacity:.7">— Infresh habla como tu compañía.</span>
+  </div>
+</section>
+
+<!-- ================= MOMENTO 2 ================= -->
+<section id="meeting">
+  <div id="mHead">
+    <div class="logo"><img src="https://infresh.ai/assets/infresh-logo-BuO8dKHd.png" alt="Infresh" onerror="this.outerHTML='<b>infresh</b>'" style="height:22px"></div>
+    <div class="rec"><div class="dot"></div>escuchando a tu <span class="term">squad</span> · <span id="mTimer">00:00</span></div>
+    <div class="spacer"></div>
+    <button id="btnReplay" style="font-size:13px">↻ repetir demo</button>
+    <button id="btnEnd" style="font-size:13px">terminar</button>
+  </div>
+
+  <div id="question">
+    <div class="q">¿Cómo logramos que más usuarios<br>vuelvan en su segunda semana?</div>
+    <svg width="240" height="12" viewBox="0 0 240 12"><path d="M3 8 C 40 2, 80 11, 120 6 S 200 3, 237 7" stroke="url(#g)" stroke-width="3" fill="none" stroke-linecap="round"/><defs><linearGradient id="g"><stop offset="0" stop-color="#5B32EC"/><stop offset="1" stop-color="#D400E6"/></linearGradient></defs></svg>
+    <div class="src">la pregunta sale de la misión de Diego · Infresh agrupa lo que van diciendo, sin importar quién lo dice</div>
+  </div>
+
+  <div id="board">
+    <div class="col"><h3>Lo que está pasando</h3><div id="colDiag"></div></div>
+    <div class="col"><h3>Ideas sobre la mesa</h3><div id="colIdeas"></div></div>
+  </div>
+
+  <div id="liveline"><div id="livelineInner"></div></div>
+
+  <div id="hand" title="Infresh levantó la mano — tocá para ver qué tiene">🖐<span class="badge" style="display:none">1</span></div>
+  <div id="handTip">Infresh tiene algo. Cuando quieras.</div>
+
+  <div id="panel">
+    <div class="ph">✳ <b>Lo que Infresh tenía para aportar</b><button id="panelClose">✕</button></div>
+    <div id="aportes"></div>
+  </div>
+</section>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+
+/* ===== vocabulario de la compañía ===== */
+$("termSel").onchange=e=>{
+  document.querySelectorAll(".term").forEach(el=>el.textContent=e.target.value);
+};
+
+/* ===== la manito ===== */
+let handLevel=0, pendientes=[];
+function raiseHand(aporte){
+  pendientes.push(aporte);
+  handLevel=Math.min(3, aporte.big?3:pendientes.length);
+  const h=$("hand");
+  h.className="l"+handLevel;
+  const b=h.querySelector(".badge");
+  b.style.display="flex"; b.textContent=pendientes.length;
+  $("handTip").classList.add("on");
+  setTimeout(()=>$("handTip").classList.remove("on"), 2600);
+}
+function lowerHand(){
+  handLevel=0; pendientes=[];
+  $("hand").className="";
+  $("hand").querySelector(".badge").style.display="none";
+}
+$("hand").onclick=openPanel;
+$("panelClose").onclick=()=>$("panel").classList.remove("on");
+function openPanel(){
+  if(!pendientes.length) return;
+  const box=$("aportes");
+  pendientes.forEach(a=>{
+    const el=document.createElement("div");
+    el.className="aporte "+a.kind;
+    el.innerHTML='<div class="at"></div><p></p>'+(a.action?'<button class="go"></button>':'')+
+      '<div class="fb"><button data-v="1">👍</button><button data-v="0">👎</button><span class="thanks">gracias — Infresh aprende</span></div>';
+    el.querySelector(".at").textContent=a.label;
+    el.querySelector("p").textContent=a.text;
+    if(a.action){ const g=el.querySelector(".go"); g.textContent=a.action; g.onclick=a.onAction; }
+    el.querySelectorAll(".fb button").forEach(btn=>btn.onclick=()=>{
+      el.querySelectorAll(".fb button").forEach(x=>x.classList.remove("sel"));
+      btn.classList.add("sel");
+      el.querySelector(".thanks").classList.add("on");
+    });
+    box.prepend(el);
+  });
+  $("panel").classList.add("on");
+  lowerHand();
+}
+
+/* ===== tablero de temas ===== */
+function addChip(col, emoji, text){
+  const el=document.createElement("div");
+  el.className="chip";
+  el.innerHTML='<span class="em"></span><span></span>';
+  el.querySelector(".em").textContent=emoji;
+  el.children[1].textContent=text;
+  $(col).appendChild(el);
+}
+let lineTimeout;
+function liveline(text){
+  const el=$("livelineInner");
+  clearTimeout(lineTimeout);
+  if(!text){el.style.display="none";return;}
+  el.style.display="block";
+  el.textContent="“"+text+"”";
+  lineTimeout=setTimeout(()=>el.style.display="none", 7000);
+}
+
+/* ===== demo guionado ===== */
+const goMatriz=()=>location.href="matriz.html";
+const SCRIPT=[
+  [0,"Bueno, arranquemos con lo de retención. El dato que nos bajó el CEO: solo el veintidós por ciento de los usuarios vuelve en la segunda semana.",
+     ()=>addChip("colDiag","📉","Retención semana 2: 22% — el problema de la misión")],
+  [1,"Para mí el problema está en el onboarding. La mayoría no llega al primer momento de valor, entonces no tiene razones para volver.",
+     ()=>{addChip("colDiag","🚪","El onboarding no llega al primer momento de valor");
+          raiseHand({kind:"dato",label:"📊 dato de la compañía",text:"Data lo confirmó ayer: el 70% del drop de semana 2 ocurre antes de terminar el onboarding. Están hablando del lugar correcto."});}],
+  [2,"¿Y si mandamos un mail al tercer día, con un resumen personalizado de lo que la persona ya hizo? Eso te da una excusa genuina para volver.",
+     ()=>addChip("colIdeas","✉️","Mail día 3 con resumen personalizado")],
+  [3,"También podríamos probar notificaciones push. Aunque me da un poco de miedo quemarlas si las usamos mal.",
+     ()=>{addChip("colIdeas","🔔","Notificaciones push (con cuidado)");
+          raiseHand({kind:"conexion",label:"🔗 otra reunión de la compañía",text:"El squad de Growth ya probó pushes en abril: +8% de retorno pero +12% de opt-out. Su acuerdo: usar solo notificaciones transaccionales. Les puede ahorrar el experimento."});},
+     {autoOpen:true}],
+  [4,"Buen dato ese. Entonces las push las pensamos con mucho más cuidado.", null],
+  [5,"Otra idea: que el primer proyecto venga con un template ya armado, así nadie arranca de una pantalla en blanco.",
+     ()=>addChip("colIdeas","🧩","Templates de arranque (nada de pantalla en blanco)")],
+  [6,"Ok, tenemos un buen paquete de ideas. ¿Cómo las priorizamos para decidir qué entra al sprint?",
+     ()=>raiseHand({big:true,kind:"powerup",label:"⚡ power up",
+        text:"Tienen 3 ideas y una pregunta de priorización. Es el momento exacto para una matriz esfuerzo-impacto: 5 minutos y salen con un orden acordado.",
+        action:"Abrir la matriz →",onAction:goMatriz}),
+     {autoOpen:true, delay:1500}],
+];
+let step=0, playing=false, demoAudio=null, mStart=0, mTimerInt;
+function playStep(){
+  if(!playing || step>=SCRIPT.length){ playing=false; return; }
+  const [n,text,fx,opts]=SCRIPT[step++];
+  liveline(text);
+  demoAudio=new Audio("audio/mvp-"+n+".mp3");
+  const done=()=>{
+    fx&&fx();
+    if(opts&&opts.autoOpen) setTimeout(openPanel, opts.delay||1300);
+    setTimeout(playStep, (opts&&opts.autoOpen)?3400:800);
+  };
+  demoAudio.onended=done;
+  demoAudio.onerror=()=>setTimeout(done, Math.max(2500, text.length*55));
+  demoAudio.play().catch(()=>setTimeout(done, Math.max(2500, text.length*55)));
+}
+function startDemo(){
+  ["colDiag","colIdeas","aportes"].forEach(id=>$(id).innerHTML="");
+  $("panel").classList.remove("on");
+  lowerHand();
+  step=0; playing=true;
+  mStart=Date.now();
+  clearInterval(mTimerInt);
+  mTimerInt=setInterval(()=>{
+    const s=Math.floor((Date.now()-mStart)/1000);
+    $("mTimer").textContent=String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
+  },1000);
+  // si dejaste tu contexto en la invitación, entra como primer aporte
+  const ctx=sessionStorage.getItem("infresh-ctx");
+  if(ctx) setTimeout(()=>raiseHand({kind:"contexto",label:"🙌 tu aporte de la invitación",
+    text:"Antes de la reu dijiste: “"+ctx+"”. Está sobre la mesa — Infresh lo conecta con lo que se hable."}), 1500);
+  setTimeout(playStep, 900);
+}
+function enterMeeting(){
+  const v=$("ctx").value.trim();
+  if(v) sessionStorage.setItem("infresh-ctx", v); else sessionStorage.removeItem("infresh-ctx");
+  $("invite").style.display="none";
+  document.querySelector("header").style.display="none";
+  $("meeting").classList.add("on");
+  startDemo();
+}
+$("btnEnter").onclick=enterMeeting;
+$("skip").onclick=()=>{ $("ctx").value=""; enterMeeting(); };
+$("btnReplay").onclick=()=>{ try{demoAudio&&demoAudio.pause();}catch(e){} playing=false; setTimeout(startDemo,300); };
+$("btnEnd").onclick=()=>{ try{demoAudio&&demoAudio.pause();}catch(e){} playing=false; location.reload(); };
+</script>
+</body>
+</html>
