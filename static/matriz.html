@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Infresh — Matriz en vivo (prototipo)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;600&family=DM+Sans:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --text:#1A1460; --muted:#4E5077; --accent:#5B32EC; --border:#e6e6f0; --panel2:#F5F5FA;
+    --grad:linear-gradient(90deg,#5B32EC,#D400E6);
+    --shadow:0 1px 3px rgba(26,20,96,.07), 0 10px 30px -12px rgba(26,20,96,.18);
+    --s1:91,50,236; --s2:212,0,230; --s3:47,107,232; --s4:14,165,233;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#fff;color:var(--text);font:15px/1.5 "DM Sans",-apple-system,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+  header{display:flex;align-items:center;gap:14px;padding:12px 24px;border-bottom:1px solid var(--border)}
+  .logo img{height:24px;display:block}
+  .htitle{font-family:Raleway;font-size:15px;color:var(--muted)}
+  .htitle b{color:var(--text);font-weight:600}
+  .beta{font-size:10.5px;font-weight:700;letter-spacing:1px;color:#fff;background:var(--grad);border-radius:20px;padding:2px 9px}
+  .spacer{flex:1}
+  button{font:inherit;border-radius:999px;border:1px solid var(--border);background:#fff;color:var(--text);padding:8px 18px;cursor:pointer;transition:all .15s}
+  button:hover{border-color:var(--accent);box-shadow:0 1px 5px rgba(26,20,96,.10)}
+  #btnDemo{background:var(--grad);color:#fff;border:none;font-weight:600}
+  #btnDemo:hover{opacity:.92}
+  #btnMic.on{background:#dc2626;color:#fff;border:none}
+  a.back{font-size:13px;color:var(--muted);text-decoration:none}
+  a.back:hover{color:var(--accent)}
+
+  main{flex:1;position:relative;min-height:0;padding:26px 34px 90px}
+
+  /* ===== matriz ===== */
+  #matrix{position:relative;width:100%;height:100%;border-radius:22px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--border);
+    background:
+      radial-gradient(circle at 20% 22%, rgba(52,211,153,.13), transparent 55%),
+      radial-gradient(circle at 82% 22%, rgba(91,50,236,.12), transparent 55%),
+      radial-gradient(circle at 20% 82%, rgba(148,163,184,.14), transparent 55%),
+      radial-gradient(circle at 82% 82%, rgba(244,63,94,.10), transparent 55%),
+      radial-gradient(rgba(26,20,96,.06) 1px, transparent 1px) 0 0/26px 26px,
+      #fff;
+    animation:mfade 1s}
+  @keyframes mfade{from{opacity:0;transform:scale(.985)}to{opacity:1}}
+  .axisX{position:absolute;left:5%;right:5%;top:50%;border-top:1.5px dashed rgba(26,20,96,.22)}
+  .axisY{position:absolute;top:6%;bottom:6%;left:50%;border-left:1.5px dashed rgba(26,20,96,.22)}
+  .axLabel{position:absolute;font-family:Raleway;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+  .axLabel.effort{bottom:10px;left:50%;transform:translateX(-50%)}
+  .axLabel.impact{left:-34px;top:50%;transform:rotate(-90deg) translateX(26%);transform-origin:center}
+  .axHint{position:absolute;font-size:11px;color:var(--muted);opacity:.75}
+  .quad{position:absolute;font-family:Raleway;font-size:13px;font-weight:600;letter-spacing:.6px;color:var(--muted);opacity:.85;transition:all .4s}
+  .quad em{font-style:normal;margin-right:5px}
+  .quad.q1{left:3.5%;top:4.5%;color:#0a8a5f}
+  .quad.q2{right:3.5%;top:4.5%;color:#5B32EC}
+  .quad.q3{left:3.5%;bottom:5.5%}
+  .quad.q4{right:3.5%;bottom:5.5%;color:#be3a55}
+  .quad.flash{transform:scale(1.15);text-shadow:0 0 18px currentColor}
+
+  /* ===== ideas ===== */
+  .idea{position:absolute;left:50%;top:104%;transform:translate(-50%,-50%);max-width:210px;
+    background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:9px 14px;
+    box-shadow:0 3px 14px rgba(26,20,96,.13);font-size:13.5px;font-weight:500;display:flex;gap:8px;align-items:center;
+    transition:left 1s cubic-bezier(.22,1.4,.36,1), top 1s cubic-bezier(.22,1.4,.36,1), opacity .5s, transform .5s;cursor:grab;z-index:3}
+  .idea .em{font-size:17px}
+  .idea.pending{border-color:var(--accent);box-shadow:0 0 0 4px rgba(91,50,236,.12), 0 3px 14px rgba(26,20,96,.13)}
+  .idea.pending::after{content:"escuchando…";position:absolute;top:-19px;left:12px;font-size:10px;color:var(--accent);letter-spacing:.5px}
+  .idea.placed{animation:pop .7s}
+  @keyframes pop{0%{box-shadow:0 0 0 0 rgba(91,50,236,.45)}70%{box-shadow:0 0 0 16px rgba(91,50,236,0)}100%{box-shadow:0 3px 14px rgba(26,20,96,.13)}}
+  .idea.star{border-color:#f59e0b;background:#fffdf4}
+  .idea.star::before{content:"⭐";position:absolute;top:-11px;right:-9px;font-size:16px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.2));animation:starpop .5s}
+  @keyframes starpop{from{transform:scale(0) rotate(-90deg)}to{transform:scale(1)}}
+  .idea.bye{opacity:0;transform:translate(-50%,-50%) rotate(14deg) scale(.5)}
+
+  /* ===== subtítulo ===== */
+  #caption{position:absolute;left:0;right:0;bottom:16px;display:flex;justify-content:center;pointer-events:none;z-index:6}
+  #captionInner{max-width:66%;background:rgba(255,255,255,.96);border:1px solid var(--border);border-radius:14px;
+    padding:9px 18px;font-size:15px;display:none;box-shadow:var(--shadow)}
+  #captionInner .who{font-size:11px;font-weight:700;letter-spacing:.5px}
+
+  /* ===== toasts de Infresh ===== */
+  #toasts{position:absolute;top:20px;right:20px;display:flex;flex-direction:column;gap:9px;z-index:7;max-width:320px}
+  .toast{background:#fff;border:1px solid var(--border);border-left:4px solid;border-image:linear-gradient(180deg,#5B32EC,#D400E6) 1;
+    border-radius:12px;padding:10px 14px;font-size:13px;box-shadow:var(--shadow);animation:tin .5s cubic-bezier(.2,.9,.3,1.2);color:#2b2566}
+  .toast b{color:var(--accent)}
+  @keyframes tin{from{opacity:0;transform:translateX(40px)}to{opacity:1}}
+  .toast.out{opacity:0;transition:opacity .6s}
+
+  /* confetti */
+  .conf{position:absolute;width:8px;height:8px;border-radius:2px;z-index:8;animation:fall 1.7s ease-in forwards}
+  @keyframes fall{from{transform:translateY(-10px) rotate(0)}to{transform:translateY(115vh) rotate(720deg);opacity:.2}}
+
+  #hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;pointer-events:none}
+  #hint .card{background:rgba(255,255,255,.94);border:1px solid var(--border);border-radius:18px;padding:22px 30px;text-align:center;box-shadow:var(--shadow)}
+  #hint h2{font-family:Raleway;font-weight:400;font-size:20px;margin-bottom:6px}
+  #hint p{font-size:13.5px;color:var(--muted);max-width:420px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><img src="https://infresh.ai/assets/infresh-logo-BuO8dKHd.png" alt="Infresh" onerror="this.outerHTML='<b>infresh</b>'"></div>
+  <div class="htitle"><b>Matriz Esfuerzo · Impacto</b> — companion en vivo</div>
+  <div class="beta">PROTOTIPO</div>
+  <div class="spacer"></div>
+  <a class="back" href="index.html">← volver al companion</a>
+  <button id="btnMic" title="Experimental: decí «idea: …» y después «impacto alto, esfuerzo bajo»">🎙 Con mi voz</button>
+  <button id="btnDemo">▶ Ver demo</button>
+</header>
+
+<main>
+  <div id="matrix">
+    <div class="axisX"></div><div class="axisY"></div>
+    <div class="axLabel effort">Esfuerzo →</div>
+    <div class="axLabel impact">Impacto →</div>
+    <div class="quad q1" id="qQuick"><em>⚡</em>Quick wins</div>
+    <div class="quad q2"><em>🚀</em>Grandes apuestas</div>
+    <div class="quad q3"><em>🧂</em>Relleno</div>
+    <div class="quad q4"><em>🕳</em>Ingratas</div>
+    <div id="hint"><div class="card">
+      <h2>La reunión arma la matriz. Hablando.</h2>
+      <p>Infresh escucha la conversación: cada idea que nombran aparece, y cuando dicen «impacto alto, esfuerzo bajo» vuela a su cuadrante. ▶ <b>Ver demo</b> para la reunión simulada, o 🎙 probalo con tu voz.</p>
+    </div></div>
+  </div>
+  <div id="toasts"></div>
+  <div id="caption"><div id="captionInner"><div class="who"></div><div class="what"></div></div></div>
+</main>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const POS={bajo:0.18, medio:0.5, alto:0.82};          // esfuerzo → x
+const POSY={alto:0.20, medio:0.5, bajo:0.80};          // impacto → y
+const SPEAKERS={Mariano:"--s1", Cecilia:"--s2", Federico:"--s3", "Lucía":"--s4"};
+const ideas={};   // title → el
+let running=false, audio=null, jit=0;
+
+/* ============ piezas visuales ============ */
+function addIdea(title, emoji){
+  const el=document.createElement("div");
+  el.className="idea pending";
+  el.innerHTML='<span class="em"></span><span class="tt"></span>';
+  el.querySelector(".em").textContent=emoji;
+  el.querySelector(".tt").textContent=title;
+  $("matrix").appendChild(el);
+  ideas[title]=el;
+  makeDraggable(el);
+  $("hint")?.remove();
+  return el;
+}
+function placeIdea(title, eff, imp){
+  const el=ideas[title]; if(!el) return;
+  el.classList.remove("pending");
+  jit=(jit+1)%4;
+  const jx=[-3,3,-1.5,1.5][jit], jy=[2,-2,3,-3][jit];
+  el.style.left=(POS[eff]*100+jx)+"%";
+  el.style.top=(POSY[imp]*100+jy)+"%";
+  el.classList.add("placed");
+  el.dataset.eff=eff; el.dataset.imp=imp;
+}
+function starIdea(title){ ideas[title]?.classList.add("star"); }
+function discardIdea(title){
+  const el=ideas[title]; if(!el) return;
+  el.classList.add("bye");
+  setTimeout(()=>el.remove(), 600);
+  delete ideas[title];
+}
+function toast(html){
+  const t=document.createElement("div");
+  t.className="toast";
+  t.innerHTML=html;
+  $("toasts").prepend(t);
+  setTimeout(()=>{t.classList.add("out"); setTimeout(()=>t.remove(),700);}, 6500);
+}
+function flashQuad(){ $("qQuick").classList.add("flash"); setTimeout(()=>$("qQuick").classList.remove("flash"),1800); }
+function confetti(){
+  const colors=["#5B32EC","#D400E6","#2F6BE8","#34d399","#f59e0b"];
+  for(let i=0;i<26;i++){
+    const c=document.createElement("div");
+    c.className="conf";
+    c.style.left=(8+Math.random()*84)+"%";
+    c.style.top="-10px";
+    c.style.background=colors[i%colors.length];
+    c.style.animationDelay=(Math.random()*0.5)+"s";
+    $("matrix").appendChild(c);
+    setTimeout(()=>c.remove(),2600);
+  }
+}
+let capTimeout;
+function caption(who,text){
+  const inner=$("captionInner");
+  clearTimeout(capTimeout);
+  if(!text){inner.style.display="none";return;}
+  inner.style.display="block";
+  inner.querySelector(".who").textContent=who;
+  inner.querySelector(".who").style.color=SPEAKERS[who]?("rgb(var("+SPEAKERS[who]+"))"):"var(--accent)";
+  inner.querySelector(".what").textContent=text;
+  capTimeout=setTimeout(()=>inner.style.display="none", 6000);
+}
+function makeDraggable(el){
+  el.addEventListener("pointerdown", e=>{
+    if(el.classList.contains("pending")) return;
+    e.preventDefault(); el.setPointerCapture(e.pointerId);
+    el.style.transition="none"; el.style.cursor="grabbing"; el.style.zIndex=9;
+    const r=$("matrix").getBoundingClientRect();
+    const move=ev=>{
+      el.style.left=Math.max(4,Math.min(96,(ev.clientX-r.left)/r.width*100))+"%";
+      el.style.top=Math.max(6,Math.min(96,(ev.clientY-r.top)/r.height*100))+"%";
+    };
+    const up=()=>{ el.style.transition=""; el.style.cursor="grab"; el.style.zIndex=3;
+      el.removeEventListener("pointermove",move); el.removeEventListener("pointerup",up); };
+    el.addEventListener("pointermove",move); el.addEventListener("pointerup",up);
+  });
+}
+
+/* ============ demo guionado ============ */
+// [audio, quién, texto, acciónAlEmpezar, acciónAlTerminar]
+const T={rc:"Contratos de riesgo compartido", reg:"Registro digital de pacientes", desc:"Descuento por volumen",
+  ab:"Advisory board KOLs", app:"App de adherencia", sop:"Soporte a pacientes"};
+const SCRIPT=[
+  [0,"Mariano","Sigamos. Soy Mariano. Armemos la matriz de iniciativas para defender Rivelia: tiren ideas y las vamos clasificando por esfuerzo e impacto.",
+     null, ()=>toast("✳ <b>Matriz iniciada</b> — Infresh clasifica lo que escucha")],
+  [1,"Federico","Soy Federico. Primera idea: contratos de riesgo compartido con los financiadores. Para mí es impacto alto, esfuerzo alto.",
+     ()=>addIdea(T.rc,"🤝"), ()=>{placeIdea(T.rc,"alto","alto"); toast("✳ <b>"+T.rc+"</b> → impacto alto · esfuerzo alto");}],
+  [2,"Cecilia","Me llamo Cecilia. Propongo el registro digital de pacientes. Impacto alto, esfuerzo medio.",
+     ()=>addIdea(T.reg,"🩺"), ()=>{placeIdea(T.reg,"medio","alto"); toast("✳ <b>"+T.reg+"</b> → impacto alto · esfuerzo medio");}],
+  [3,"Lucía","Yo soy Lucía. Sumo el descuento escalonado por volumen: esfuerzo bajo, impacto medio.",
+     ()=>addIdea(T.desc,"🏷️"), ()=>{placeIdea(T.desc,"bajo","medio"); toast("✳ <b>"+T.desc+"</b> → impacto medio · esfuerzo bajo");}],
+  [4,"Cecilia","Y el advisory board con los líderes de opinión: esfuerzo bajo, impacto alto.",
+     ()=>addIdea(T.ab,"🎓"), ()=>{placeIdea(T.ab,"bajo","alto"); flashQuad(); toast("⚡ <b>"+T.ab+"</b> entró en Quick wins");}],
+  [5,"Mariano","Infresh, marcá el advisory board como quick win prioritario.",
+     null, ()=>{starIdea(T.ab); toast("✳ <b>Comando de voz</b>: quick win prioritario ⭐");}],
+  [6,"Federico","También pensé en una app de adherencia para pacientes. Impacto alto, pero esfuerzo alto.",
+     ()=>addIdea(T.app,"📱"), ()=>{placeIdea(T.app,"alto","alto"); toast("✳ <b>"+T.app+"</b> → impacto alto · esfuerzo alto");}],
+  [7,"Lucía","Pensándolo mejor, el descuento por volumen es impacto bajo. Movelo abajo.",
+     null, ()=>{placeIdea(T.desc,"bajo","bajo"); toast("✳ <b>Comando</b>: "+T.desc+" → impacto bajo");}],
+  [8,"Cecilia","Agrego el programa de soporte a pacientes, con enfermería a domicilio. Impacto medio, esfuerzo medio.",
+     ()=>addIdea(T.sop,"🏠"), ()=>{placeIdea(T.sop,"medio","medio"); toast("✳ <b>"+T.sop+"</b> → impacto medio · esfuerzo medio");}],
+  [9,"Mariano","¿Qué nos queda en quick wins?",
+     null, ()=>{flashQuad(); toast("⚡ <b>Quick wins</b>: Advisory board KOLs ⭐");}],
+  [10,"Federico","Entonces arrancamos por el advisory board, y el descuento por volumen lo descartamos.",
+     null, ()=>{discardIdea(T.desc); toast("✳ <b>Descartada</b>: "+T.desc);}],
+  [11,"Mariano","Perfecto. Infresh, guardá la matriz y compartila con el comité regional.",
+     null, ()=>{confetti(); toast("✳ <b>Matriz guardada</b> · 5 iniciativas · compartida con el Comité Regional"); running=false; $("btnDemo").textContent="↻ Repetir demo";}],
+];
+let step=0;
+function playStep(){
+  if(!running || step>=SCRIPT.length){ running=false; return; }
+  const [n,who,text,onStart,onEnd]=SCRIPT[step++];
+  caption(who,text);
+  onStart&&onStart();
+  audio=new Audio("audio/matriz-"+n+".mp3");
+  const done=()=>{ onEnd&&onEnd(); setTimeout(playStep, 650); };
+  audio.onended=done;
+  audio.onerror=()=>setTimeout(done, Math.max(2500, text.length*55));
+  audio.play().catch(()=>setTimeout(done, Math.max(2500, text.length*55)));
+}
+$("btnDemo").onclick=()=>{
+  if(running) return;
+  Object.keys(ideas).forEach(discardIdea);
+  $("toasts").innerHTML="";
+  step=0; running=true;
+  playStep();
+};
+
+/* ============ modo micrófono (experimental) ============ */
+let rec=null, lastIdea=null, pendEff=null, pendImp=null;
+function parseVoice(text){
+  const t=text.toLowerCase();
+  const mIdea=text.match(/(?:idea|anot[aá]|propongo|sumo|agrego)[:,]?\s+(.{3,80})/i);
+  if(mIdea){
+    let title=mIdea[1].replace(/\b(impacto|esfuerzo)\b[\s\S]*/i,"").replace(/[.,;]\s*$/,"").trim();
+    if(title.length>2){
+      title=title[0].toUpperCase()+title.slice(1);
+      addIdea(title,"💡"); lastIdea=title; pendEff=pendImp=null;
+      toast("✳ Escuché la idea: <b>"+title+"</b>");
+    }
+  }
+  const mE=t.match(/esfuerzo\s+(alto|medio|bajo)/); if(mE) pendEff=mE[1];
+  const mI=t.match(/impacto\s+(alto|medio|bajo)/); if(mI) pendImp=mI[1];
+  if(lastIdea && pendEff && pendImp){
+    placeIdea(lastIdea, pendEff, pendImp);
+    toast("✳ <b>"+lastIdea+"</b> → impacto "+pendImp+" · esfuerzo "+pendEff);
+    if(pendImp==="alto"&&pendEff==="bajo") flashQuad();
+    pendEff=pendImp=null;
+  }
+  const mDel=text.match(/(?:descart[aá]|elimin[aá]|sac[aá])\s+(?:la\s+|el\s+)?(.{3,60})/i);
+  if(mDel){
+    const target=Object.keys(ideas).find(k=>k.toLowerCase().includes(mDel[1].toLowerCase().slice(0,12)));
+    if(target){ discardIdea(target); toast("✳ <b>Descartada</b>: "+target); }
+  }
+  if(/quick win|prioriz[aá]/i.test(t) && lastIdea){ starIdea(lastIdea); }
+}
+$("btnMic").onclick=()=>{
+  if(rec){ rec.onend=null; rec.stop(); rec=null; $("btnMic").classList.remove("on"); $("btnMic").textContent="🎙 Con mi voz"; return; }
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ toast("Este navegador no soporta voz — usá Chrome."); return; }
+  rec=new SR(); rec.lang="es-ES"; rec.continuous=true; rec.interimResults=true;
+  rec.onresult=ev=>{
+    let interim="";
+    for(let i=ev.resultIndex;i<ev.results.length;i++){
+      const r=ev.results[i];
+      if(r.isFinal){ caption("Vos", r[0].transcript.trim()); parseVoice(r[0].transcript); }
+      else interim+=r[0].transcript;
+    }
+    if(interim) caption("Vos", interim.trim());
+  };
+  rec.onend=()=>{ if(rec) try{rec.start();}catch(e){} };
+  rec.start();
+  $("hint")?.remove();
+  $("btnMic").classList.add("on"); $("btnMic").textContent="■ Detener voz";
+  toast("🎙 Te escucho. Decí <b>«idea: …»</b> y después <b>«impacto alto, esfuerzo bajo»</b>. También «descartá …».");
+};
+</script>
+</body>
+</html>
